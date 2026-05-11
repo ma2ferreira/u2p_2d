@@ -1,0 +1,41 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Compiled extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment files
+.env
+.venv
+env/
+venv/
+conda-meta/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Matplotlib cache
+.matplotlib/
+
+# Temporary files
+*.log
+*.tmp
+
+# Spyder
+.spyderproject
+.spyproject
