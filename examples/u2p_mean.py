@@ -8,6 +8,7 @@ Version:    v1.0
 '''
 
 import numpy as np
+import check_data
 import setup
 import model
 import poisson
@@ -42,7 +43,7 @@ import plot_tools as pt
 #   NS    : u, v, u_t, v_t, rho, nu
 #   TH    : u, v, u_mean, v_mean, rho, nu
 #   RANS  : u_mean, v_mean, u_var, v_var, uv_mean, rho, nu
-#   ALL   : x, y, mask, rho, nu, q_0
+#   all   : x, y, mask, rho, nu, q_0
 #
 # GRID & COORDINATE SYSTEM
 #
@@ -93,7 +94,10 @@ import plot_tools as pt
 # -----------------------------------------------------------------------------
 
 # load data
-data = np.load('sample_data/C10U.npy', allow_pickle=True).item()
+data = np.load('sample_data/P0_alpha15.npy', allow_pickle=True).item()
+
+# check data format
+check_data.report(data, 'RANS')
 
 # grid spacing and node connectivity matrix
 grid = setup.discretise(data)
@@ -114,9 +118,7 @@ pt.plot_lic_pressure(
     data['u_mean'],
     data['v_mean'],
     p_mean, 
+    20,
     1,
-    0.1,
     cmap='RdBu_r'
 )
-
-

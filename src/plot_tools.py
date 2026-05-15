@@ -30,6 +30,15 @@ from scipy.interpolate import RegularGridInterpolator
 
 __all__ = ['plot_lic_pressure', 'plot_residuals']
 
+# global matplotlib style
+plt.rcParams.update({
+    'font.size': 9,
+    'font.family': 'serif',
+    'font.serif': ['Computer Modern'],
+    'text.usetex': True,
+    'figure.dpi': 300,
+})
+
 def plot_lic_pressure(x, y, u, v, p, t, dt, cmap='RdBu_r'):
     '''
     Display a coloured LIC image with an accurate pressure colorbar.
