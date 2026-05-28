@@ -21,35 +21,37 @@ import plot_tools as pt
 # All velocity and statistical fields must be 2D NumPy arrays defined on a
 # shared structured grid. The following rules apply uniformly across all fields.
 #
-#
 # FIELDS
 #
 # 1. Description
 #   x, y              : 1D grid coordinate arrays
-#   mask              : Boolean validity mask
+#   domain            : Boolean validity mask
+#   bc_mask           : Dirichlet boundary condition mask. Two formats are
+#                       accepted (see DIRICHLET BOUNDARY CONDITIONS below).
 #   u, v              : Instantaneous velocity components
 #   u_t, v_t          : Temporal derivatives ∂u/∂t, ∂v/∂t
 #   u_mean, v_mean    : Time-averaged velocity components
 #   u_var, v_var      : Velocity variances
-#   uv_mean           : Reynolds shear stress component
+#   uv_mean           : Reynolds shear stress
 #   rho               : Fluid density (scalar)
 #   nu                : Kinematic viscosity (scalar)
-#   q_0               : Reference free-stream dynamic pressure. If None, the 
-#                       reference value is computed as the average over all
-#                       data points where Dirichlet boundary conditions are 
-#                       enforced.
-# 
+#   q_0               : Reference free-stream dynamic pressure. Required when
+#                       bc_mask is boolean. Pressure at Dirichlet nodes is then
+#                       computed as p = q_0 - 0.5 * rho * |u|².
+#
 # 2. Required fields depend on the model
-#   NS    : u, v, u_t, v_t, rho, nu
-#   TH    : u, v, u_mean, v_mean, rho, nu
-#   RANS  : u_mean, v_mean, u_var, v_var, uv_mean, rho, nu
-#   all   : x, y, mask, rho, nu, q_0
+#   NS    : u, v, u_t, v_t
+#   TH    : u, v, u_mean, v_mean
+#   RANS  : u_mean, v_mean, u_var, v_var, uv_mean
+#   all   : x, y, domain, rho, nu
+#   opt   : bc_mask, q_0
+#
 #
 # GRID & COORDINATE SYSTEM
 #
 # 1. Arrays follow row-major (C) order with a top-left origin
 #
-#   A[0, 0] : top-left corner of the domain
+#   A[0, 0]     : top-left corner of the domain
 #   A[row, col] : A[y-index, x-index]
 #
 # 2. Coordinate arrays
@@ -60,28 +62,50 @@ import plot_tools as pt
 # PREPROCESSING
 #
 # 1. Vertical flip (bottom-left origin convention)
-#    If the source data uses a bottom-left origin, flip vertically before use
+#    If the source data uses a bottom-left origin, flip vertically before use:
 #    field = np.flipud(field)
 #
 # 2. Invalid value encoding
-#    Zeros used as sentinels in raw data must be replaced with NaN using
+#    Zeros used as sentinels in raw data must be replaced with NaN:
 #    field[field == 0] = np.nan
 #
 # 3. Validity mask
 #    A boolean array of shape (ny, nx) that is True at every node where all
 #    fields carry valid (non-NaN) data, and False elsewhere.
 #
+#
+# DIRICHLET BOUNDARY CONDITIONS
+#
+# bc_mask selects nodes where pressure is prescribed in the Poisson system.
+# Two formats are accepted:
+#
+# 1. Boolean mask — pressure computed from velocity statistics
+#    bc_mask is a (ny, nx) bool array. True marks a Dirichlet node where
+#    pressure is prescribed by the velocity fields using q_0 (mandatory in this
+#    mode):
+#
+#      NS / TH  :  p = q_0 - 0.5 * rho * (u² + v²)
+#      RANS     :  p = q_0 - 0.5 * rho * (u_mean² + v_mean² + u_var + v_var)
+#
+# 2. Numeric mask — pressure prescribed directly
+#    bc_mask is a (ny, nx) float array. NaN marks interior (unconstrained)
+#    nodes, and non-`NaN` values are used to prescribe pressure directly. q_0 
+#    and model are ignored in this mode.
+#
 # DATA DICTIONARY
-# 
-# All variables must be packed into a single dict with the exact keys below:
+#
+# Required variables must be packed into a single dict with the exact keys:
 #
 #   data = {
 #       'x'      : ...,   # (nx,)    x-coordinates
 #       'y'      : ...,   # (ny,)    y-coordinates
 #       'domain' : ...,   # (ny, nx) boolean validity mask
-#       'bc_mask': ...,   # (ny, nx) boolean set Dirichlet boundary condition
+#       'bc_mask': ...,   # (ny, nx) bool  — Dirichlet nodes (pressure computed)
+#                         #          float — Dirichlet nodes (pressure prescribed)
 #       'u'      : ...,   # (ny, nx)
 #       'v'      : ...,   # (ny, nx)
+#       'u_t'    : ...,   # (ny, nx)
+#       'v_t'    : ...,   # (ny, nx)
 #       'u_mean' : ...,   # (ny, nx)
 #       'v_mean' : ...,   # (ny, nx)
 #       'u_var'  : ...,   # (ny, nx)
@@ -89,7 +113,7 @@ import plot_tools as pt
 #       'uv_mean': ...,   # (ny, nx)
 #       'rho'    : ...,   # scalar — fluid density
 #       'nu'     : ...,   # scalar — kinematic viscosity
-#       'q_0'    : ...,   # scalar — reference free-stream dynamic pressure 
+#       'q_0'    : ...,   # scalar — reference pressure (boolean bc_mask only)
 #   }
 # -----------------------------------------------------------------------------
 

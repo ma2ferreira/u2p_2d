@@ -157,25 +157,46 @@ def dlet(data, model):
     '''
     Construct Dirichlet boundary conditions for the pressure Poisson problem.
 
-    Prescribed pressure values are computed from velocity statistics at nodes
-    selected by bc_mask and returned alongside their flattened row-major
-    indices for direct insertion into the linear system.
+    Prescribed pressure values are either computed from velocity statistics
+    (boolean bc_mask) or read directly from bc_mask (numeric bc_mask), at nodes 
+    selected by bc_mask. Values are returned alongside their flattened
+    row-major indices for direct insertion into the linear system.em.
 
-    Parameters
-    ----------
+    PARAMETERS
     data : dict
         Data dictionary. Required keys:
-            bc_mask : (ny, nx) boolean Dirichlet node mask
-            rho     : scalar fluid density
-            u_mean  : (ny, nx) mean streamwise velocity (all models)
-            u, v    : (ny, nx) instantaneous velocities (NS, TH)
-            u_mean, v_mean, u_var, v_var : (ny, nx) statistics (RANS)
+
+        bc_mask : (ny, nx) bool or float
+            Boolean – True marks a Dirichlet node; pressure is computed
+                      from velocity statistics and q_0.
+            Numeric – NaN marks interior nodes; non-NaN values are used
+                      directly as prescribed pressures.
+        rho : scalar
+            Fluid density.
+        q_0 : scalar or (ny, nx)
+            Reference pressure used when bc_mask is boolean.
+        u, v : (ny, nx)
+            Instantaneous velocities. Required for models 'NS' and 'TH'.
+        u_mean, v_mean : (ny, nx)
+            Mean streamwise and wall-normal velocities. Required for 'RANS'.
+        u_var, v_var : (ny, nx)
+            Streamwise and wall-normal velocity variances. Required for 'RANS'.
+
     model : str
-        Pressure gradient formulation. One of 'NS', 'TH', 'RANS'.
+        Pressure formulation used when bc_mask is boolean.
+        One of 'NS', 'TH', 'RANS'. Ignored when bc_mask is numeric.
+
+    RETURNS
+    out : (2, n) ndarray
+        Row 0 – flattened row-major indices of Dirichlet nodes.
+        Row 1 – corresponding prescribed pressure values.
 
     NOTES
     - Grid indexing follows row-major (C-style) ordering.
     - Pressure values are prescribed directly in the linear system.
+    - When bc_mask is boolean, pressure is computed as:
+        p = q_0 - 0.5 * rho * (|u|^2)          (NS, TH)
+        p = q_0 - 0.5 * rho * (|u_mean|^2 + k)  (RANS, k = u_var + v_var)
     '''
     
     # unpack data
@@ -189,36 +210,26 @@ def dlet(data, model):
     rho = data['rho']
     q_0 = data['q_0']
     
-    # linear indices where bc_mask is True
-    rows, cols = np.where(bc_mask)
-    bc_idx = rows * bc_mask.shape[1] + cols
-
     # reference pressure values
-    if data['q_0'] is None:
-        q_0 = 0.5 * rho * np.mean(u_mean[bc_mask] ** 2 + v_mean[bc_mask] ** 2)
-
-    if model in ('NS', 'TH'):
-        bc_value = q_0 - 0.5 * rho * (
-            + (u[bc_mask]**2 + v[bc_mask]**2)
-        )
-    elif model == 'RANS':
-        bc_value =  q_0 - 0.5 * rho * (
-            + (u_mean[bc_mask]**2 + v_mean[bc_mask]**2)
-            + (u_var[bc_mask]  + v_var[bc_mask])
-        )
-    '''
-    if model in ('NS', 'TH'):
-        bc_value = 0.5 * data['rho'] * (
-            np.mean(data['u_mean'][bc_mask])**2
-            - (data['u'][bc_mask]**2 + data['v'][bc_mask]**2)
-        )
-    elif model == 'RANS':
-        bc_value = 0.5 * data['rho'] * (
-            np.mean(data['u_mean'][bc_mask])**2
-            - (data['u_mean'][bc_mask]**2 + data['v_mean'][bc_mask]**2)
-            - (data['u_var'][bc_mask]  + data['v_var'][bc_mask])
-        )
-    '''
+    if np.issubdtype(bc_mask.dtype, np.bool_):
+    
+        rows, cols = np.where(bc_mask)
+        bc_idx = rows * bc_mask.shape[1] + cols
+    
+        if model in ('NS', 'TH'):
+            bc_value = q_0 - 0.5 * rho * (u[bc_mask]**2 + v[bc_mask]**2)
+        elif model == 'RANS':
+            bc_value = q_0 - 0.5 * rho * (
+                u_mean[bc_mask]**2 + v_mean[bc_mask]**2
+                + u_var[bc_mask]   + v_var[bc_mask]
+            )
+    
+    else:
+        valid = ~np.isnan(bc_mask)
+        rows, cols = np.where(valid)
+        bc_idx   = rows * bc_mask.shape[1] + cols
+        bc_value = bc_mask[valid]
+    
     return np.vstack([bc_idx, bc_value])
 
 def residuals(u, v, node, epsilon=0.1):
