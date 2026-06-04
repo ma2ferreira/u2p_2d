@@ -39,13 +39,7 @@ conda activate u2p_env
 > ```
 > Then point Spyder to the `u2p_env` interpreter via **Tools → Preferences → Python Interpreter**.
 
-### 4. Install dependencies
-
-```bash
-pip install numpy scipy
-```
-
-### 5. Install the package in editable mode
+### 4. Install the package in editable mode
 
 ```bash
 pip install -e .
@@ -53,13 +47,13 @@ pip install -e .
 
 Editable mode (`-e`) means changes to the source are immediately reflected without reinstalling.
 
-### 6. Verify the installation
+### 5. Verify the installation
 
 ```bash
 python -c "import u2p_2d; print('u2p_2d imported successfully')"
 ```
 
-### 7. Run the example script
+### 6. Run the example script
 
 ```bash
 python examples/example_script.py
