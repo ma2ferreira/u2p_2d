@@ -22,7 +22,7 @@ cd "C:\Users\YourName\Projects"
 ### 2. Clone the repository
 
 ```bash
-git clone https://github.com/mferreira-dev/u2p_2d.git
+git clone https://github.com/ma2ferreira/u2p_2d.git
 cd u2p_2d
 ```
 
